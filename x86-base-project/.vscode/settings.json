@@ -1,0 +1,9 @@
+{
+    "editor.insertSpaces": false,
+    
+    "files.exclude": {
+        "**/*.o": true,
+        "**/*.elf": true,
+        "**/*.elf": true
+    }
+}
