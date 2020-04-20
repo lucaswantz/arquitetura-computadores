@@ -74,17 +74,17 @@ void desenha_p2() {
 
 void desenha_bola() {
   
-  draw_square(x_bola, y_bola, 30, 30, 0XFF0000); 
+    draw_square(x_bola, y_bola, 30, 30, 0XFF0000); 
 
-  /* Se a bola saiu do esquadro, ela é projetada no meio novamente */
-//   if(x_bola >= 974 || y_bola <= 50){
-//     x_bola = 512;    y_bola = 312;    dx_bola = 0;    dy_bola = 0;
-//   } 
-   if(y_bola<0){
-      y_bola= y_bola*(-1);
-      }else{
+    /* Se a bola saiu do esquadro, ela é projetada no meio novamente */
+    //   if(x_bola >= 974 || y_bola <= 50){
+    //     x_bola = 512;    y_bola = 312;    dx_bola = 0;    dy_bola = 0;
+    //   } 
+    if(y_bola<0){
+        y_bola= y_bola*(-1);
+    }else{
          y_bola= y_bola;
-      }
+    }
 	if(x_bola<0){x_bola= x_bola*(-1);}else{x_bola= x_bola;} 
 
   if(i == 1){
