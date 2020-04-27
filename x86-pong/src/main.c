@@ -13,7 +13,7 @@ static int musica_idx = 0;
 static int musica[] = {2, 7, 2, 7, 3, 7, 4, 7, 4, 7, 3, 7, 2, 7, 1, 7, 0, 7, 0, 7, 1, 7, 2, 7, 2, 7, 1, 7, 1};
 
 // Tabela de notas
-//                          dó   ré   mi   fá   sol  lá   si   pausa
+//                         dó   ré   mi   fá   sol  lá   si   pausa
 static long int tones[] = {523, 587, 659, 698, 783, 880, 987, 0};
 
 // Define o endereço base da porta serial
