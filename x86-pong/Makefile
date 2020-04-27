@@ -39,7 +39,7 @@ clean:
 	$(DEL) -f **/*.elf *.o **/*.o **/**/*.o iso/boot/*.elf *.img *.iso *.elf
 
 run: $(PROJECT).iso
-	$(QEMU) -soundhw pcspk -serial -mon:stdio -hda $<
+	$(QEMU) -soundhw pcspk -monitor stdio -hda $<
 
 debug: kernel.elf
 	$(QEMU) -soundhw pcspk -serial mon:stdio -s -S -kernel $< &

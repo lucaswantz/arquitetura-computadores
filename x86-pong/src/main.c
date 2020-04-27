@@ -20,8 +20,8 @@ static long int tones[] = {523, 587, 659, 698, 783, 880, 987, 0};
 static int COM = 0x3f8; /* COM1 */
 
 // Define o tamanho do tabuleiro (ex 1024 X 768).
-static int tamanho_tabuleiro_x = 1024;
-static int tamanho_tabuleiro_y = 768;
+static int x_size_tabuleiro = 1024;
+static int y_size_tabuleiro = 768;
 
 // Indica o tamanho da barra
 static int altura_barra = 200;
@@ -30,23 +30,34 @@ static int altura_barra = 200;
 static int velocidade_controle = 20;
 
 // Indica a posição atual dos players
-static int y1 = 234;
-static int y2 = 234;
+static int x_position_player_1 = 60;
+static int y_position_player_1 = 234;
+static int x_size_player_1 = 20;
+
+static int x_position_player_2 = 944;
+static int y_position_player_2 = 234;
+static int x_size_player_2 = 20;
 
 // Indica a movimentação dos players
-static int dy1 = 0;
-static int dy2 = 0;
+static int dy_player_1 = 0;
+static int dy_player_2 = 0;
 
-// Define a velocidade da bola
-static int velocidade_bola = 5;
+// INFORMAÇÕES DA BOLA
+// Indica o tamanho bola
+static int x_size_bola = 20;
+static int y_size_bola = 20;
 
 // Indica a posição inicial da bola
+static int x_initial_bola = 512;
+static int y_initial_bola = 334;
+
+// Indica a posição atual da bola
 static int x_bola = 512;
-static int y_bola = 312;
+static int y_bola = 334;
 
 // Indica a movimentação da bola
-static int dy_bola = 0;
-static int dx_bola = 0;
+static int dy_bola = 10;
+static int dx_bola = 10;
 
 int i = 0;
 
@@ -54,107 +65,64 @@ int i = 0;
 Risquinhos do p1 começam no 482 e vão DECREMENTANDO de 10 em 10
 Risquinhos do p2 começam em 540 e vão INCOREMENTANDO de 10 em 10
 */
-static int score_p1 = 482;
-static int score_p2 = 540;
+static int score_p1 = 0;
+static int score_p2 = 0;
 
-void desenha_pontuacao_p1()
+//static int score_p1 = 482;
+//static int score_p2 = 540;
+
+void toca_musica(int type)
 {
-    if (score_p1 > 100)
+    int len = sizeof(musica) / sizeof(musica[0]);
+    int nota = 0;
+    long int tone = 0;
+
+    switch (type)
     {
-        draw_square(score_p1, 15, 5, 25, color_white);
-        score_p1 -= 10;
-    }
-}
+    case 0:
+        nota = musica[musica_idx];
+        tone = tones[nota];
 
-void desenha_pontuacao_p2()
-{
-    if (score_p2 < 924)
-    {
-        draw_square(score_p2, 15, 5, 25, color_white);
-        score_p2 += 10;
-    }
-}
+        if (pause == 0)
+        {
+            musica_idx++;
 
-void desenha_player_1()
-{
-    draw_square(60, y1, 20, altura_barra, color_black);
+            if (musica_idx >= len)
+                musica_idx = 0;
 
-    y1 += dy1;
-    draw_square(60, y1, 20, altura_barra, color_white);
+            if (tone != 0)
+            {
+                play_sound(tone);
+            }
+            else
+            {
+                stop_sound();
+            }
+        }
+        break;
 
-    if (y1 < 0)
-        y1 = 0;
+    case 1:
+        play_sound(tones[3]);
+        play_sound(tones[1]);
+        //stop_sound();
+        break;
 
-    if (y1 > 568)
-        y1 = 568;
-}
+    case 2:
+        if (pause == 0)
+        {
+            if (tone == 0)
+                stop_sound();
+        }
+        break;
 
-void desenha_player_2()
-{
-    draw_square(tamanho_tabuleiro_x - 80, y2, 20, altura_barra, color_black);
-
-    y2 += dy2;
-    draw_square(tamanho_tabuleiro_x - 80, y2, 20, altura_barra, color_white);
-    if (y2 < 0)
-        y2 = 0;
-
-    if (y2 > 568)
-        y2 = 568;
-}
-
-void desenha_bola()
-{
-    draw_square(x_bola, y_bola, 30, 30, color_black);
-
-    /* Se a bola saiu do esquadro, ela é projetada no meio novamente */
-    //   if(x_bola >= 974 || y_bola <= 50){
-    //     x_bola = 512;    y_bola = 312;    dx_bola = 0;    dy_bola = 0;
-    //   }
-
-    if (y_bola < 0)
-    {
-        y_bola = y_bola * (-1);
-    }
-    else
-    {
-        y_bola = y_bola;
+    default:
+        break;
     }
 
-    if (x_bola < 0)
-    {
-        x_bola = x_bola * (-1);
-    }
-    else
-    {
-        x_bola = x_bola;
-    }
+    pause++;
 
-    if (i == 1)
-    {
-        x_bola -= velocidade_bola;
-        y_bola -= velocidade_bola;
-    }
-    else if (i == 0)
-    {
-        x_bola += velocidade_bola;
-        y_bola += velocidade_bola;
-    }
-
-    if (y_bola >= 600)
-        i = 1;
-
-    draw_square(x_bola, y_bola, 30, 30, color_white);
-
-    dx_bola += 1;
-    dy_bola += 1;
-}
-
-int desenha_pontilhado()
-{
-    for (int i = 1; i < tamanho_tabuleiro_y; i += 8)
-    {
-        draw_square(tamanho_tabuleiro_x / 2, i, 2, 2, color_white);
-    }
+    if (pause == 5)
+        pause = 0;
 }
 
 void play_sound(long int freq)
@@ -179,39 +147,154 @@ void stop_sound()
     outb(0x61, tmp & 0xFC);
 }
 
-void toca_musica()
+void desenha_pontuacao_p1()
 {
-    int len = sizeof(musica) / sizeof(musica[0]);
-    int nota = musica[musica_idx];
-    long int tone = tones[nota];
+    int position = 482;
 
-    if (pause == 0)
+    for (int i = 0; i < score_p1; i++)
     {
-        musica_idx++;
+        draw_square(position, 15, 5, 25, color_white);
+        position -= 10;
+    }
+}
 
-        if (musica_idx >= len)
-            musica_idx = 0;
+void desenha_pontuacao_p2()
+{
+    int position = 540;
 
-        if (tone != 0)
+    for (int i = 0; i < score_p2; i++)
+    {
+        draw_square(position, 15, 5, 25, color_white);
+        position += 10;
+    }
+}
+
+void desenha_player_1()
+{
+    draw_square(x_position_player_1, y_position_player_1, 20, altura_barra, color_black);
+
+    y_position_player_1 += dy_player_1;
+    draw_square(x_position_player_1, y_position_player_1, 20, altura_barra, color_white);
+
+    if (y_position_player_1 < 0)
+        y_position_player_1 = 0;
+
+    if (y_position_player_1 > 568)
+        y_position_player_1 = 568;
+}
+
+void desenha_player_2()
+{
+    draw_square(x_position_player_2, y_position_player_2, 20, altura_barra, color_black);
+
+    y_position_player_2 += dy_player_2;
+    draw_square(x_position_player_2, y_position_player_2, 20, altura_barra, color_white);
+
+    if (y_position_player_2 < 0)
+        y_position_player_2 = 0;
+
+    if (y_position_player_2 > 568)
+        y_position_player_2 = 568;
+}
+
+int bola_bate_no_player_1()
+{
+    if (dx_bola > 0)
+    {
+        return 0;
+    }
+
+    // Posição de X for menor ou igual a posição do jogador
+    if (x_bola <= (x_position_player_1 + x_size_player_1))
+    {
+        // Posicao y da bola for entre a posição do taco
+        if ((y_bola + y_size_bola) > y_position_player_1 &&
+            (y_bola) < (y_position_player_1 + altura_barra))
         {
-            play_sound(tone);
-        }
-        else
-        {
-            stop_sound();
+            return 1;
         }
     }
 
-    pause++;
+    return 0;
+}
 
-    if (pause == 5)
-        pause = 0;
+int bola_bate_no_player_2()
+{
+    if (dx_bola < 0)
+    {
+        return 0;
+    }
+
+    // Posição de X for menor ou igual a posição do jogador
+    if ((x_bola + x_size_bola) >= (x_position_player_2))
+    {
+        // Posicao y da bola for entre a posição do taco
+        if ((y_bola + y_size_bola) > y_position_player_2 &&
+            (y_bola) < (y_position_player_2 + altura_barra))
+        {
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
+void desenha_bola()
+{
+    draw_square(x_bola, y_bola, x_size_bola, y_size_bola, color_black);
+
+    /* Se a bola saiu do esquadro, ela é projetada no meio novamente */
+    //   if(x_bola >= 974 || y_bola <= 50){
+    //     x_bola = 512;    y_bola = 312;    dx_bola = 0;    dy_bola = 0;
+    //   }
+
+    x_bola += dx_bola;
+    y_bola += dy_bola;
+
+    // CONTROLA OS LIMITES DO EIXO X
+    if (x_bola <= 0)
+    {
+        x_bola = x_initial_bola;
+        y_bola = y_initial_bola;
+        score_p2++;
+        toca_musica(1);
+    }
+
+    if (x_bola + x_size_bola >= x_size_tabuleiro)
+    {
+        x_bola = x_initial_bola;
+        y_bola = y_initial_bola;
+        score_p1++;
+        toca_musica(1);
+    }
+
+    draw_square(x_bola, y_bola, x_size_bola, y_size_bola, color_white);
+
+    // CONTROLA OS LIMITES DO EIXO Y
+    if (y_bola <= 0)
+        dy_bola *= -1;
+
+    if (y_bola + y_size_bola >= y_size_tabuleiro)
+        dy_bola *= -1;
+
+    // CONTROLA O CONTATO COM OS JOGADORES
+    if (bola_bate_no_player_1() || bola_bate_no_player_2())
+        dx_bola *= -1;
+}
+
+int desenha_pontilhado()
+{
+    for (int i = 1; i < y_size_tabuleiro; i += 10)
+    {
+        draw_square(x_size_tabuleiro / 2, i, 2, 4, color_white);
+    }
 }
 
 // INTERRUPÇÃO DO TIMER +/- 18X POR SEGUNDO
 void isr0(void)
 {
-    toca_musica_jogo();
+    //toca_musica(0);
+    toca_musica(2);
 
     desenha_player_1();
     desenha_player_2();
@@ -238,37 +321,37 @@ void isr1(void)
 
         // TECLA W
         if (keycode == 17)
-            dy1 = 0;
+            dy_player_1 = 0;
 
         // TECLA S
         if (keycode == 31)
-            dy1 = 0;
+            dy_player_1 = 0;
 
         // TECLA UP
         if (keycode == 72)
-            dy2 = 0;
+            dy_player_2 = 0;
 
         // TECLA DOWN
         if (keycode == 80)
-            dy2 = 0;
+            dy_player_2 = 0;
     }
     else
     {
         // TECLA W
         if (keycode == 17)
-            dy1 = -velocidade_controle;
+            dy_player_1 = -velocidade_controle;
 
         // TECLA S
         if (keycode == 31)
-            dy1 = velocidade_controle;
+            dy_player_1 = velocidade_controle;
 
         // TECLA DOWN
         if (keycode == 80)
-            dy2 = velocidade_controle;
+            dy_player_2 = velocidade_controle;
 
         // TECLA UP
         if (keycode == 72)
-            dy2 = -velocidade_controle;
+            dy_player_2 = -velocidade_controle;
     }
 }
 
@@ -328,7 +411,7 @@ void usart_puts(char *str)
 int main(void)
 {
     // Desenha a tela principal
-    draw_square(0, 0, tamanho_tabuleiro_x, tamanho_tabuleiro_y, color_black);
+    draw_square(0, 0, x_size_tabuleiro, y_size_tabuleiro, color_black);
 
     // Inicializa para poder transmitir dados pro console
     usart_init(COM);
