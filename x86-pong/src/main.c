@@ -8,7 +8,7 @@ static char color_debug = 0x00AA00; // #00AA00
 
 // Musica para tocar
 static volatile int pause = 0;
-static int muscia_idx = 0;
+static int musica_idx = 0;
 //static int musica[] = { 0, 1, 2, 3, 4, 5, 6 }
 static int musica[] = {2, 7, 2, 7, 3, 7, 4, 7, 4, 7, 3, 7, 2, 7, 1, 7, 0, 7, 0, 7, 1, 7, 2, 7, 2, 7, 1, 7, 1};
 
@@ -25,10 +25,9 @@ static int tamanho_tabuleiro_y = 768;
 
 // Indica o tamanho da barra
 static int altura_barra = 200;
-static int velocidade_controle = 20;
 
 // Define a velocidade do movimento dos jogadores
-static int velocidade_player = 20;
+static int velocidade_controle = 20;
 
 // Indica a posição atual dos players
 static int y1 = 234;
@@ -38,7 +37,7 @@ static int y2 = 234;
 static int dy1 = 0;
 static int dy2 = 0;
 
-// Bola
+// Define a velocidade da bola
 static int velocidade_bola = 5;
 
 // Indica a posição inicial da bola
@@ -165,6 +164,62 @@ int desenha_pontilhado()
     for (int i = 1; i < tamanho_tabuleiro_y; i += 8)
     {
         draw_square(tamanho_tabuleiro_x / 2, i, 2, 2, color_black);
+    }
+}
+
+void play_sound(long int freq)
+{
+    long int div;
+    unsigned char tmp;
+
+    div = 1193180 / freq;
+    outb(0x43, 0xB6);
+    outb(0x42, div);
+    outb(0x42, div >> 8);
+
+    tmp = inb(0x61);
+    if ((tmp & 0x03) != 0x03)
+    {
+        outb(0x61, tmp | 0x03);
+    }
+}
+
+void stop_sound()
+{
+    unsigned char tmp;
+    tmp = inb(0x61);
+    outb(0x61, tmp & 0xFC);
+}
+
+void toca_musica()
+{
+    int len = sizeof(musica) / sizeof(musica[0]);
+    int nota = musica[musica_idx];
+    long int tone = tones[nota];
+
+    if (pause == 0)
+    {
+        musica_idx++;
+
+        if (musica_idx >= len)
+        {
+            musica_idx = 0;
+        }
+
+        if (tone != 0)
+        {
+            play_sound(tone);
+        }
+        else
+        {
+            stop_sound();
+        }
+    }
+
+    pause++;
+    if (pause == 5)
+    {
+        pause = 0;
     }
 }
 
@@ -303,7 +358,6 @@ void usart_puts(char *str)
 
 int main(void)
 {
-
     // Desenha a tela principal
     draw_square(0, 0, tamanho_tabuleiro_x, tamanho_tabuleiro_y, color_black);
     usart_init(COM);
