@@ -61,7 +61,7 @@ void desenha_pontuacao_p1()
 {
     if (score_p1 > 100)
     {
-        draw_square(score_p1, 15, 5, 25, color_black);
+        draw_square(score_p1, 15, 5, 25, color_white);
         score_p1 -= 10;
     }
 }
@@ -70,49 +70,41 @@ void desenha_pontuacao_p2()
 {
     if (score_p2 < 924)
     {
-        draw_square(score_p2, 15, 5, 25, color_black);
+        draw_square(score_p2, 15, 5, 25, color_white);
         score_p2 += 10;
     }
 }
 
 void desenha_player_1()
 {
-    draw_square(60, y1, 20, altura_barra, color_white);
-    y1 += dy1;
-
     draw_square(60, y1, 20, altura_barra, color_black);
 
+    y1 += dy1;
+    draw_square(60, y1, 20, altura_barra, color_white);
+
     if (y1 < 0)
-    {
         y1 = 0;
-    }
 
     if (y1 > 568)
-    {
         y1 = 568;
-    }
 }
 
 void desenha_player_2()
 {
-    draw_square(tamanho_tabuleiro_x - 80, y2, 20, altura_barra, color_white);
-    y2 += dy2;
-
     draw_square(tamanho_tabuleiro_x - 80, y2, 20, altura_barra, color_black);
+
+    y2 += dy2;
+    draw_square(tamanho_tabuleiro_x - 80, y2, 20, altura_barra, color_white);
     if (y2 < 0)
-    {
         y2 = 0;
-    }
 
     if (y2 > 568)
-    {
         y2 = 568;
-    }
 }
 
 void desenha_bola()
 {
-    draw_square(x_bola, y_bola, 30, 30, color_white);
+    draw_square(x_bola, y_bola, 30, 30, color_black);
 
     /* Se a bola saiu do esquadro, ela é projetada no meio novamente */
     //   if(x_bola >= 974 || y_bola <= 50){
@@ -149,9 +141,7 @@ void desenha_bola()
     }
 
     if (y_bola >= 600)
-    {
         i = 1;
-    }
 
     draw_square(x_bola, y_bola, 30, 30, color_white);
 
@@ -163,7 +153,7 @@ int desenha_pontilhado()
 {
     for (int i = 1; i < tamanho_tabuleiro_y; i += 8)
     {
-        draw_square(tamanho_tabuleiro_x / 2, i, 2, 2, color_black);
+        draw_square(tamanho_tabuleiro_x / 2, i, 2, 2, color_white);
     }
 }
 
@@ -179,9 +169,7 @@ void play_sound(long int freq)
 
     tmp = inb(0x61);
     if ((tmp & 0x03) != 0x03)
-    {
         outb(0x61, tmp | 0x03);
-    }
 }
 
 void stop_sound()
@@ -202,9 +190,7 @@ void toca_musica()
         musica_idx++;
 
         if (musica_idx >= len)
-        {
             musica_idx = 0;
-        }
 
         if (tone != 0)
         {
@@ -217,13 +203,12 @@ void toca_musica()
     }
 
     pause++;
+
     if (pause == 5)
-    {
         pause = 0;
-    }
 }
 
-// Vai ser executada a cada 18x por segundo, aproximadamente
+// INTERRUPÇÃO DO TIMER +/- 18X POR SEGUNDO
 void isr0(void)
 {
     toca_musica_jogo();
@@ -248,58 +233,42 @@ void isr1(void)
     // Se uma tecla foi pressionada
     if (keycode & 0x80)
     {
-        // Devolve o bit mais
+        // Desconta o bit mais significativo, para que consiga ler a tecla
         keycode &= ~0x80;
 
         // TECLA W
         if (keycode == 17)
-        {
             dy1 = 0;
-        }
 
         // TECLA S
         if (keycode == 31)
-        {
             dy1 = 0;
-        }
 
         // TECLA UP
         if (keycode == 72)
-        {
             dy2 = 0;
-        }
 
         // TECLA DOWN
         if (keycode == 80)
-        {
             dy2 = 0;
-        }
     }
     else
     {
         // TECLA W
         if (keycode == 17)
-        {
             dy1 = -velocidade_controle;
-        }
 
         // TECLA S
         if (keycode == 31)
-        {
             dy1 = velocidade_controle;
-        }
 
         // TECLA DOWN
         if (keycode == 80)
-        {
             dy2 = velocidade_controle;
-        }
 
         // TECLA UP
         if (keycode == 72)
-        {
             dy2 = -velocidade_controle;
-        }
     }
 }
 
@@ -324,9 +293,7 @@ char read_serial(int PORT)
     //while (serial_received() == 0);
 
     if (serial_received(PORT) == 0)
-    {
         return 0;
-    }
 
     return inb(PORT);
 }
@@ -340,7 +307,8 @@ int is_transmit_empty(int PORT)
 void usart_write(int PORT, unsigned char c)
 {
     while (is_transmit_empty(PORT) == 0)
-        ;
+    {
+    }
 
     outb(PORT, c);
 }
@@ -356,10 +324,13 @@ void usart_puts(char *str)
     }
 }
 
+// Inicializa o jogo
 int main(void)
 {
     // Desenha a tela principal
     draw_square(0, 0, tamanho_tabuleiro_x, tamanho_tabuleiro_y, color_black);
+
+    // Inicializa para poder transmitir dados pro console
     usart_init(COM);
     is_transmit_empty(COM);
 
