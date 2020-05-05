@@ -1,425 +1,489 @@
 #include <sys/io.h>
 #include <gfx/video.h>
 
-// Define as cores do projeto
-static char color_black = 0x000000; // #000000
-static char color_white = 0xFFFFFF; // #FFFFFF
-static char color_debug = 0x00AA00; // #00AA00
+/* COM */
+#define COM1 0x3F8
+#define COM2 0x2F8
 
-// Musica para tocar
-static volatile int pause = 0;
-static int musica_idx = 0;
-//static int musica[] = { 0, 1, 2, 3, 4, 5, 6 }
-static int musica[] = {2, 7, 2, 7, 3, 7, 4, 7, 4, 7, 3, 7, 2, 7, 1, 7, 0, 7, 0, 7, 1, 7, 2, 7, 2, 7, 1, 7, 1};
+volatile static int tamanho_tabuleiro_x = 1024;
+volatile static int tamanho_tabuleiro_y = 768;
 
-// Tabela de notas
-//                         dó   ré   mi   fá   sol  lá   si   pausa
-static long int tones[] = {523, 587, 659, 698, 783, 880, 987, 0};
+volatile static int altura_barra = 200;
+volatile static int largura_barra = 20;
+volatile static int velocity = 20;
+volatile static int y1 = 300;
+volatile static int y2 = 300;
+volatile static int dy1 = 0;
+volatile static int dy2 = 0;
+volatile static int tmp_y1 = 300;
+volatile static int tmp_y2 = 300;
 
-// Define o endereço base da porta serial
-static int COM = 0x3f8; /* COM1 */
+/* Controles da bola */
+volatile static int x_bola = 312;
+volatile static int y_bola = 312;
+volatile static int tmp_x_bola = 312;
+volatile static int tmp_y_bola = 312;
+volatile static int largura_bola = 30;
+volatile static int altura_bola = 30;
+volatile static int velocidade_bola = 20;
 
-// Define o tamanho do tabuleiro (ex 1024 X 768).
-static int x_size_tabuleiro = 1024;
-static int y_size_tabuleiro = 768;
+volatile static int iniciar = 0;
+volatile static int player = 0;
+volatile static int status_1 = 0;
 
-// Indica o tamanho da barra
-static int altura_barra = 200;
-
-// Define a velocidade do movimento dos jogadores
-static int velocidade_controle = 20;
-
-// Indica a posição atual dos players
-static int x_position_player_1 = 60;
-static int y_position_player_1 = 234;
-static int x_size_player_1 = 20;
-
-static int x_position_player_2 = 944;
-static int y_position_player_2 = 234;
-static int x_size_player_2 = 20;
-
-// Indica a movimentação dos players
-static int dy_player_1 = 0;
-static int dy_player_2 = 0;
-
-// INFORMAÇÕES DA BOLA
-// Indica o tamanho bola
-static int x_size_bola = 20;
-static int y_size_bola = 20;
-
-// Indica a posição inicial da bola
-static int x_initial_bola = 512;
-static int y_initial_bola = 334;
-
-// Indica a posição atual da bola
-static int x_bola = 512;
-static int y_bola = 334;
-
-// Indica a movimentação da bola
-static int dy_bola = 10;
-static int dx_bola = 10;
-
-int i = 0;
+volatile static int sobe_desce = 0x00;
 
 /*
-Risquinhos do p1 começam no 482 e vão DECREMENTANDO de 10 em 10
-Risquinhos do p2 começam em 540 e vão INCOREMENTANDO de 10 em 10
+Emite som quando pressionado
 */
-static int score_p1 = 0;
-static int score_p2 = 0;
 
-//static int score_p1 = 482;
-//static int score_p2 = 540;
+volatile static int sound_p1 = 400;
+volatile static int sound_p2 = 600;
 
-void toca_musica(int type)
-{
-    int len = sizeof(musica) / sizeof(musica[0]);
-    int nota = 0;
-    long int tone = 0;
-
-    switch (type)
-    {
-    case 0:
-        nota = musica[musica_idx];
-        tone = tones[nota];
-
-        if (pause == 0)
-        {
-            musica_idx++;
-
-            if (musica_idx >= len)
-                musica_idx = 0;
-
-            if (tone != 0)
-            {
-                play_sound(tone);
-            }
-            else
-            {
-                stop_sound();
-            }
-        }
-        break;
-
-    case 1:
-        play_sound(tones[3]);
-        play_sound(tones[1]);
-        //stop_sound();
-        break;
-
-    case 2:
-        if (pause == 0)
-        {
-            if (tone == 0)
-                stop_sound();
-        }
-        break;
-
-    default:
-        break;
-    }
-
-    pause++;
-
-    if (pause == 5)
-        pause = 0;
-}
-
-void play_sound(long int freq)
+void play_sound(long int frequencia)
 {
     long int div;
     unsigned char tmp;
 
-    div = 1193180 / freq;
+    div = 1193180 / frequencia;
     outb(0x43, 0xB6);
     outb(0x42, div);
     outb(0x42, div >> 8);
 
     tmp = inb(0x61);
     if ((tmp & 0x03) != 0x03)
+    {
         outb(0x61, tmp | 0x03);
+    }
 }
 
-void stop_sound()
+void stop_sund(void)
 {
     unsigned char tmp;
     tmp = inb(0x61);
     outb(0x61, tmp & 0xFC);
 }
 
-void desenha_pontuacao_p1()
-{
-    int position = 482;
+/* Direção da bola, onde 1=Esquerda e 0=Direita */
+volatile static int direcao = 1;
 
-    for (int i = 0; i < score_p1; i++)
+/*
+Risquinhos do p1 começam no 482 e vão DECREMENTANDO de 10 em 10
+Risquinhos do p2 começam em 540 e vão INCOREMENTANDO de 10 em 10
+*/
+
+volatile int score_p1 = 482;
+volatile int score_p2 = 540;
+
+volatile int tmp_score_p1 = 482;
+volatile int tmp_score_p2 = 540;
+
+void desenha_score_p1()
+{
+    draw_square(score_p1, 25, 5, 25, 0x000000);
+    score_p1 -= 10;
+}
+
+void desenha_score_p2()
+{
+    draw_square(score_p2, 25, 5, 25, 0x000000);
+    score_p2 += 10;
+}
+
+void desenha_pontilhado()
+{
+    for (int i = 1; i < tamanho_tabuleiro_y; i += 8)
     {
-        draw_square(position, 15, 5, 25, color_white);
-        position -= 10;
+        draw_square(tamanho_tabuleiro_x / 2, i, 2, 2, 0x000000);
     }
 }
 
-void desenha_pontuacao_p2()
+void desenha_p1()
 {
-    int position = 540;
-
-    for (int i = 0; i < score_p2; i++)
+    if (player == 1)
     {
-        draw_square(position, 15, 5, 25, color_white);
-        position += 10;
-    }
-}
-
-void desenha_player_1()
-{
-    draw_square(x_position_player_1, y_position_player_1, 20, altura_barra, color_black);
-
-    y_position_player_1 += dy_player_1;
-    draw_square(x_position_player_1, y_position_player_1, 20, altura_barra, color_white);
-
-    if (y_position_player_1 < 0)
-        y_position_player_1 = 0;
-
-    if (y_position_player_1 > 568)
-        y_position_player_1 = 568;
-}
-
-void desenha_player_2()
-{
-    draw_square(x_position_player_2, y_position_player_2, 20, altura_barra, color_black);
-
-    y_position_player_2 += dy_player_2;
-    draw_square(x_position_player_2, y_position_player_2, 20, altura_barra, color_white);
-
-    if (y_position_player_2 < 0)
-        y_position_player_2 = 0;
-
-    if (y_position_player_2 > 568)
-        y_position_player_2 = 568;
-}
-
-int bola_bate_no_player_1()
-{
-    if (dx_bola > 0)
-    {
-        return 0;
-    }
-
-    // Posição de X for menor ou igual a posição do jogador
-    if (x_bola <= (x_position_player_1 + x_size_player_1))
-    {
-        // Posicao y da bola for entre a posição do taco
-        if ((y_bola + y_size_bola) > y_position_player_1 &&
-            (y_bola) < (y_position_player_1 + altura_barra))
+        draw_square(60, y1, largura_barra, altura_barra, 0xFF0000);
+        y1 += dy1;
+        draw_square(60, y1, largura_barra, altura_barra, 0x000000);
+        if (y1 < 0)
         {
-            return 1;
+            y1 = 0;
+        }
+        if (y1 > 568)
+        {
+            y1 = 568;
         }
     }
-
-    return 0;
+    else if (player == 2)
+    {
+        draw_square(60, y1, largura_barra, altura_barra, 0x000000);
+    }
 }
 
-int bola_bate_no_player_2()
+void desenha_p2()
 {
-    if (dx_bola < 0)
+    if (player == 1)
     {
-        return 0;
-    }
-
-    // Posição de X for menor ou igual a posição do jogador
-    if ((x_bola + x_size_bola) >= (x_position_player_2))
-    {
-        // Posicao y da bola for entre a posição do taco
-        if ((y_bola + y_size_bola) > y_position_player_2 &&
-            (y_bola) < (y_position_player_2 + altura_barra))
+        draw_square(tamanho_tabuleiro_x - 80, y2, largura_barra, altura_barra, 0xFF0000);
+        y2 += dy2;
+        draw_square(tamanho_tabuleiro_x - 80, y2, largura_barra, altura_barra, 0x000000);
+        if (y2 < 0)
         {
-            return 1;
+            y2 = 0;
+        }
+        if (y2 > 568)
+        {
+            y2 = 568;
         }
     }
-
-    return 0;
+    else if (player == 2)
+    {
+        draw_square(tamanho_tabuleiro_x - 80, y2, largura_barra, altura_barra, 0x000000);
+    }
 }
 
 void desenha_bola()
 {
-    draw_square(x_bola, y_bola, x_size_bola, y_size_bola, color_black);
-
-    /* Se a bola saiu do esquadro, ela é projetada no meio novamente */
-    //   if(x_bola >= 974 || y_bola <= 50){
-    //     x_bola = 512;    y_bola = 312;    dx_bola = 0;    dy_bola = 0;
-    //   }
-
-    x_bola += dx_bola;
-    y_bola += dy_bola;
-
-    // CONTROLA OS LIMITES DO EIXO X
-    if (x_bola <= 0)
+    if (player == 1)
     {
-        x_bola = x_initial_bola;
-        y_bola = y_initial_bola;
-        score_p2++;
-        toca_musica(1);
-    }
+        draw_square(x_bola, y_bola, largura_bola, altura_bola, 0XFF0000);
+        /* Olha se tocou na borda direita */
+        if (x_bola + largura_bola >= tamanho_tabuleiro_x - 80)
+        {
+            /* Se não tocou na barra, incrementa o placar e redesenha a bola no meio */
+            if (y_bola + largura_bola < y2 || y_bola > y2 + altura_barra)
+            {
+                desenha_score_p1();
+                x_bola = 312;
+                y_bola = 312;
+                / Se não tocou, muda a direção /
+            }
+            else
+            {
+                direcao = 4;
+            }
+        }
 
-    if (x_bola + x_size_bola >= x_size_tabuleiro)
+        /* Olha se tocou na borda esquerda */
+        if (x_bola <= 80)
+        {
+            /* Se não tocou na barra, incrementa o placar e redesenha a bola no meio */
+            if (y_bola < y1 || y_bola > y1 + altura_barra)
+            {
+                desenha_score_p2();
+                x_bola = 312;
+                y_bola = 312;
+                /* Se não tocou, muda a direção */
+            }
+            else
+            {
+                direcao = 0;
+            }
+        }
+
+        if (y_bola + largura_bola >= tamanho_tabuleiro_y)
+        {
+            direcao = 3;
+        }
+
+        if (y_bola + largura_bola <= 20)
+        {
+            direcao = 1;
+        }
+
+        if (direcao == 1)
+        {
+            x_bola -= velocidade_bola; //de cima para baixo / esquerda
+            y_bola += velocidade_bola;
+        }
+        else if (direcao == 0)
+        {
+            x_bola += velocidade_bola; //de cima para baixo / direita
+            y_bola += velocidade_bola;
+        }
+        else if (direcao == 3)
+        {
+            x_bola += velocidade_bola; //de baixo para cima / esquerda
+            y_bola -= velocidade_bola;
+        }
+        else if (direcao == 4)
+        {
+            x_bola -= velocidade_bola; //de baixo para cima / direita
+            y_bola -= velocidade_bola;
+        }
+
+        draw_square(x_bola, y_bola, largura_bola, altura_bola, 0X0000FF);
+    }
+    else if (player == 2)
     {
-        x_bola = x_initial_bola;
-        y_bola = y_initial_bola;
-        score_p1++;
-        toca_musica(1);
+        draw_square(x_bola, y_bola, largura_bola, altura_bola, 0X0000FF);
     }
-
-    draw_square(x_bola, y_bola, x_size_bola, y_size_bola, color_white);
-
-    // CONTROLA OS LIMITES DO EIXO Y
-    if (y_bola <= 0)
-        dy_bola *= -1;
-
-    if (y_bola + y_size_bola >= y_size_tabuleiro)
-        dy_bola *= -1;
-
-    // CONTROLA O CONTATO COM OS JOGADORES
-    if (bola_bate_no_player_1() || bola_bate_no_player_2())
-        dx_bola *= -1;
 }
 
-int desenha_pontilhado()
-{
-    for (int i = 1; i < y_size_tabuleiro; i += 10)
-    {
-        draw_square(x_size_tabuleiro / 2, i, 2, 4, color_white);
-    }
-}
-
-// INTERRUPÇÃO DO TIMER +/- 18X POR SEGUNDO
+/* Vai ser executada a cada 18x por segundo, aproximadamente */
 void isr0(void)
 {
-    //toca_musica(0);
-    toca_musica(2);
-
-    desenha_player_1();
-    desenha_player_2();
-
-    desenha_pontilhado();
-
-    desenha_pontuacao_p1();
-    desenha_pontuacao_p2();
-
-    desenha_bola();
+    if (iniciar)
+    {
+        desenha_pontilhado();
+        desenha_bola();
+        desenha_p1();
+        desenha_p2();
+        if (player == 1)
+        {
+            senddadosP2();
+        }
+        else if (player == 2)
+        {
+            senddadosP1();
+        }
+    }
 }
 
-// INTERRUPÇÃO QUE CUIDA DAS TECLAS PRESSIONADAS
 void isr1(void)
 {
     char keycode;
     keycode = inb(0x60);
 
-    // Se uma tecla foi pressionada
     if (keycode & 0x80)
-    {
-        // Desconta o bit mais significativo, para que consiga ler a tecla
-        keycode &= ~0x80;
-
-        // TECLA W
-        if (keycode == 17)
-            dy_player_1 = 0;
-
-        // TECLA S
-        if (keycode == 31)
-            dy_player_1 = 0;
-
-        // TECLA UP
-        if (keycode == 72)
-            dy_player_2 = 0;
-
-        // TECLA DOWN
-        if (keycode == 80)
-            dy_player_2 = 0;
+    {                     // Verifica se a tecla foi pressionada
+        keycode &= ~0x80; // Devolve o bit mais
+        if (keycode == 17 && player == 1)
+        { // W
+            stop_sund();
+            dy1 = 0;
+        }
+        if (keycode == 72 && player == 2)
+        { // Seta para cima
+            stop_sund();
+            dy2 = 0;
+            sobe_desce = 0x00;
+        }
+        if (keycode == 31 && player == 1)
+        { // S
+            stop_sund();
+            dy1 = 0;
+        }
+        if (keycode == 80 && player == 2)
+        { // Seta para baixo
+            stop_sund();
+            dy2 = 0;
+            sobe_desce = 0x00;
+        }
     }
     else
     {
-        // TECLA W
-        if (keycode == 17)
-            dy_player_1 = -velocidade_controle;
+        if (keycode == 31 && player == 1)
+        { // S
+            play_sound(sound_p1);
+            dy1 = velocity;
+        }
+        if (keycode == 80 && player == 2)
+        { // Seta para baixo
+            play_sound(sound_p2);
+            dy2 = velocity;
+            sobe_desce = 0x02;
+        }
+        if (keycode == 17 && player == 1)
+        { // W
+            play_sound(sound_p1);
+            dy1 = -velocity;
+        }
+        if (keycode == 72 && player == 2)
+        { // Seta para cima
+            play_sound(sound_p2);
+            dy2 = -velocity;
+            sobe_desce = 0x01;
+        }
 
-        // TECLA S
-        if (keycode == 31)
-            dy_player_1 = velocidade_controle;
-
-        // TECLA DOWN
-        if (keycode == 80)
-            dy_player_2 = velocidade_controle;
-
-        // TECLA UP
-        if (keycode == 72)
-            dy_player_2 = -velocidade_controle;
+        if (keycode == 57 && player == 0)
+        { // Space
+            iniciar = 1;
+            player = 1;
+            write_serial(0x05);
+        }
     }
+}
+
+void isr3(void)
+{
+    unsigned char dados = inb(COM2);
+
+    if (status_1 == 0)
+    {
+        if (dados == 0xFF)
+        {
+            status_1 = 1;
+        }
+        else if (dados == 0x05)
+        {
+            iniciar = 1;
+            player = 2;
+            status_1 = 0;
+        }
+    }
+    else if (status_1 == 1)
+    {
+        if (player == 1)
+        {
+            if (dados == 0x01)
+            {
+                dy2 = -velocity;
+                // draw_square(tamanho_tabuleiro_x - 80, y2, largura_barra, altura_barra, 0xFF0000);
+                status_1 = 0;
+            }
+            else if (dados == 0x02)
+            {
+                dy2 = velocity;
+                // draw_square(tamanho_tabuleiro_x - 80, y2, largura_barra, altura_barra, 0xFF0000);
+                status_1 = 0;
+            }
+            else if (dados == 0x00)
+            {
+                dy2 = 0;
+            }
+        }
+        else if (player == 2)
+        {
+            tmp_y1 = dados << 8;
+            status_1 = 2;
+        }
+    }
+    else if (status_1 == 2)
+    {
+        tmp_y1 |= dados;
+        status_1 = 3;
+    }
+    else if (status_1 == 3)
+    {
+        tmp_score_p1 = dados;
+        status_1 = 4;
+    }
+    else if (status_1 == 4)
+    {
+        tmp_y2 = dados << 8;
+        status_1 = 5;
+    }
+    else if (status_1 == 5)
+    {
+        tmp_y2 |= dados;
+        status_1 = 6;
+    }
+    else if (status_1 == 6)
+    {
+        tmp_score_p2 = dados;
+        status_1 = 7;
+    }
+    else if (status_1 == 7)
+    {
+        tmp_x_bola = dados << 8;
+        status_1 = 8;
+    }
+    else if (status_1 == 8)
+    {
+        tmp_x_bola |= dados;
+        status_1 = 9;
+    }
+    else if (status_1 == 9)
+    {
+        tmp_y_bola = dados << 8;
+        status_1 = 10;
+    }
+    else if (status_1 == 10)
+    {
+        tmp_y_bola |= dados;
+        setDados();
+        status_1 = 0;
+    }
+}
+
+void setDados()
+{
+    draw_square(60, y1, largura_barra, altura_barra, 0xFF0000);
+    draw_square(x_bola, y_bola, largura_bola, altura_bola, 0XFF0000);
+    draw_square(tamanho_tabuleiro_x - 80, y2, largura_barra, altura_barra, 0xFF0000);
+
+    y1 = tmp_y1;
+    score_p1 = tmp_score_p1 + 472;
+    y2 = tmp_y2;
+    score_p2 = tmp_score_p2 + 530;
+    x_bola = tmp_x_bola;
+    y_bola = tmp_y_bola;
+
+    draw_square(60, y1, largura_barra, altura_barra, 0x000000);
+    draw_square(x_bola, y_bola, largura_bola, altura_bola, 0X0000FF);
+    draw_square(tamanho_tabuleiro_x - 80, y2, largura_barra, altura_barra, 0x000000);
+}
+
+void senddadosP2()
+{
+    write_serial(0xFF);
+    write_serial(y1 >> 8);
+    write_serial(y1);
+    score_p1 = score_p1 - 472;
+    write_serial(score_p1); //score_p1
+    write_serial(y2 >> 8);
+    write_serial(y2);
+    score_p2 = score_p2 - 530;
+    write_serial(score_p2); //score_p2
+    write_serial(x_bola >> 8);
+    write_serial(x_bola);
+    write_serial(y_bola >> 8);
+    write_serial(y_bola);
+}
+
+void senddadosP1()
+{
+    write_serial(0xFF);
+    write_serial(sobe_desce);
 }
 
 void usart_init(int base_addr)
 {
-    outb(base_addr + 1, 0x00); // Disable all interrupts
-    outb(base_addr + 3, 0x80); // Enable DLAB (set baud rate divisor)
-    outb(base_addr + 0, 0x01); // Set divisor to 1 (lo byte) 115200 baud
-    outb(base_addr + 1, 0x00); //                  (hi byte)
-    outb(base_addr + 3, 0x03); // 8 bits, no parity, one stop bit
-    outb(base_addr + 2, 0xC7); // Enable FIFO, clear them, with 14-byte threshold
-    outb(base_addr + 4, 0x0B); // IRQs enabled, RTS/DSR set
+    outb(base_addr + 1, 0x00);
+    outb(base_addr + 3, 0x80);
+    outb(base_addr + 0, 0x01);
+    outb(base_addr + 1, 0x00);
+    outb(base_addr + 3, 0x03);
+    outb(base_addr + 2, 0xC7);
+    outb(base_addr + 4, 0x0B);
+    outb(base_addr + 1, 0x01);
 }
 
-int serial_received(int PORT)
+int is_transmit_empty(int base_addr)
 {
-    return inb(PORT + 5) & 1;
+    return inb(base_addr + 5) & 0x20;
 }
 
-char read_serial(int PORT)
+void usart_write(int base_addr, char dados)
 {
-    //while (serial_received() == 0);
-
-    if (serial_received(PORT) == 0)
-        return 0;
-
-    return inb(PORT);
-}
-
-int is_transmit_empty(int PORT)
-{
-    return inb(PORT + 5) & 0x20;
-}
-
-// Função para escrever um caracter
-void usart_write(int PORT, unsigned char c)
-{
-    while (is_transmit_empty(PORT) == 0)
+    while (is_transmit_empty(base_addr) == 0)
     {
     }
 
-    outb(PORT, c);
+    outb(base_addr, dados);
 }
 
-// Função para escrever uma string
-void usart_puts(char *str)
+void usart_puts(int base_addr, char *str)
 {
-
-    while (*str != '\0')
+    while (*str)
     {
-        usart_write(COM, *str);
-        str++;
+        usart_write(base_addr, *str++);
     }
 }
 
-// Inicializa o jogo
+void write_serial(char dados)
+{
+    usart_write(COM2, dados);
+}
+
 int main(void)
 {
-    // Desenha a tela principal
-    draw_square(0, 0, x_size_tabuleiro, y_size_tabuleiro, color_black);
-
-    // Inicializa para poder transmitir dados pro console
-    usart_init(COM);
-    is_transmit_empty(COM);
-
+    draw_square(0, 0, tamanho_tabuleiro_x, tamanho_tabuleiro_y, 0xFF0000);
+    usart_init(COM1);
+    usart_init(COM2);
     while (1)
     {
     }
-
     return 0;
 }
