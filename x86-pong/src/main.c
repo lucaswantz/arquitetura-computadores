@@ -8,9 +8,9 @@
 volatile static int tamanho_tabuleiro_x = 1024;
 volatile static int tamanho_tabuleiro_y = 768;
 
-volatile static int altura_barra = 200;
-volatile static int largura_barra = 20;
-volatile static int velocity = 20;
+volatile static int altura_barra = 150;
+volatile static int largura_barra = 10;
+volatile static int velocidade = 10;
 volatile static int y1 = 300;
 volatile static int y2 = 300;
 volatile static int dy1 = 0;
@@ -23,13 +23,13 @@ volatile static int x_bola = 312;
 volatile static int y_bola = 312;
 volatile static int tmp_x_bola = 312;
 volatile static int tmp_y_bola = 312;
-volatile static int largura_bola = 30;
-volatile static int altura_bola = 30;
-volatile static int velocidade_bola = 20;
+volatile static int largura_bola = 10;
+volatile static int altura_bola = 10;
+volatile static int velocidade_bola = 10;
 
 volatile static int iniciar = 0;
-volatile static int player = 0;
-volatile static int status_1 = 0;
+volatile static int jogador = 0;
+volatile static int status = 0;
 
 volatile static int sobe_desce = 0x00;
 
@@ -80,13 +80,13 @@ volatile int tmp_score_p2 = 540;
 
 void desenha_score_p1()
 {
-    draw_square(score_p1, 25, 5, 25, 0x000000);
+    draw_square(score_p1, 25, 5, 25, 0xFFFFFF);
     score_p1 -= 10;
 }
 
 void desenha_score_p2()
 {
-    draw_square(score_p2, 25, 5, 25, 0x000000);
+    draw_square(score_p2, 25, 5, 25, 0xFFFFFF);
     score_p2 += 10;
 }
 
@@ -94,17 +94,17 @@ void desenha_pontilhado()
 {
     for (int i = 1; i < tamanho_tabuleiro_y; i += 8)
     {
-        draw_square(tamanho_tabuleiro_x / 2, i, 2, 2, 0x000000);
+        draw_square(tamanho_tabuleiro_x / 2, i, 2, 2, 0xFFFFFF);
     }
 }
 
 void desenha_p1()
 {
-    if (player == 1)
+    if (jogador == 1)
     {
-        draw_square(60, y1, largura_barra, altura_barra, 0xFF0000);
-        y1 += dy1;
         draw_square(60, y1, largura_barra, altura_barra, 0x000000);
+        y1 += dy1;
+        draw_square(60, y1, largura_barra, altura_barra, 0xFFFFFF);
         if (y1 < 0)
         {
             y1 = 0;
@@ -114,19 +114,19 @@ void desenha_p1()
             y1 = 568;
         }
     }
-    else if (player == 2)
+    else if (jogador == 2)
     {
-        draw_square(60, y1, largura_barra, altura_barra, 0x000000);
+        draw_square(60, y1, largura_barra, altura_barra, 0xFFFFFF);
     }
 }
 
 void desenha_p2()
 {
-    if (player == 1)
+    if (jogador == 1)
     {
-        draw_square(tamanho_tabuleiro_x - 80, y2, largura_barra, altura_barra, 0xFF0000);
-        y2 += dy2;
         draw_square(tamanho_tabuleiro_x - 80, y2, largura_barra, altura_barra, 0x000000);
+        y2 += dy2;
+        draw_square(tamanho_tabuleiro_x - 80, y2, largura_barra, altura_barra, 0xFFFFFF);
         if (y2 < 0)
         {
             y2 = 0;
@@ -136,17 +136,17 @@ void desenha_p2()
             y2 = 568;
         }
     }
-    else if (player == 2)
+    else if (jogador == 2)
     {
-        draw_square(tamanho_tabuleiro_x - 80, y2, largura_barra, altura_barra, 0x000000);
+        draw_square(tamanho_tabuleiro_x - 80, y2, largura_barra, altura_barra, 0xFFFFFF);
     }
 }
 
 void desenha_bola()
 {
-    if (player == 1)
+    if (jogador == 1)
     {
-        draw_square(x_bola, y_bola, largura_bola, altura_bola, 0XFF0000);
+        draw_square(x_bola, y_bola, largura_bola, altura_bola, 0x000000);
         /* Olha se tocou na borda direita */
         if (x_bola + largura_bola >= tamanho_tabuleiro_x - 80)
         {
@@ -156,7 +156,6 @@ void desenha_bola()
                 desenha_score_p1();
                 x_bola = 312;
                 y_bola = 312;
-                / Se não tocou, muda a direção /
             }
             else
             {
@@ -212,11 +211,11 @@ void desenha_bola()
             y_bola -= velocidade_bola;
         }
 
-        draw_square(x_bola, y_bola, largura_bola, altura_bola, 0X0000FF);
+        draw_square(x_bola, y_bola, largura_bola, altura_bola, 0XFFFFFF);
     }
-    else if (player == 2)
+    else if (jogador == 2)
     {
-        draw_square(x_bola, y_bola, largura_bola, altura_bola, 0X0000FF);
+        draw_square(x_bola, y_bola, largura_bola, altura_bola, 0X000000);
     }
 }
 
@@ -229,13 +228,13 @@ void isr0(void)
         desenha_bola();
         desenha_p1();
         desenha_p2();
-        if (player == 1)
+        if (jogador == 1)
         {
-            senddadosP2();
+            envia_dados_P2();
         }
-        else if (player == 2)
+        else if (jogador == 2)
         {
-            senddadosP1();
+            envia_dados_P1();
         }
     }
 }
@@ -246,26 +245,33 @@ void isr1(void)
     keycode = inb(0x60);
 
     if (keycode & 0x80)
-    {                     // Verifica se a tecla foi pressionada
-        keycode &= ~0x80; // Devolve o bit mais
-        if (keycode == 17 && player == 1)
-        { // W
+    {
+        keycode &= ~0x80;
+        // W
+        if (keycode == 17 && jogador == 1)
+        {
             stop_sund();
             dy1 = 0;
         }
-        if (keycode == 72 && player == 2)
-        { // Seta para cima
+
+        // Seta cima
+        if (keycode == 72 && jogador == 2)
+        {
             stop_sund();
             dy2 = 0;
             sobe_desce = 0x00;
         }
-        if (keycode == 31 && player == 1)
-        { // S
+
+        // S
+        if (keycode == 31 && jogador == 1)
+        {
             stop_sund();
             dy1 = 0;
         }
-        if (keycode == 80 && player == 2)
-        { // Seta para baixo
+
+        // Seta baixo
+        if (keycode == 80 && jogador == 2)
+        {
             stop_sund();
             dy2 = 0;
             sobe_desce = 0x00;
@@ -273,33 +279,41 @@ void isr1(void)
     }
     else
     {
-        if (keycode == 31 && player == 1)
-        { // S
+        // S
+        if (keycode == 31 && jogador == 1)
+        {
             play_sound(sound_p1);
-            dy1 = velocity;
+            dy1 = velocidade;
         }
-        if (keycode == 80 && player == 2)
-        { // Seta para baixo
+
+        // Seta baixo
+        if (keycode == 80 && jogador == 2)
+        {
             play_sound(sound_p2);
-            dy2 = velocity;
+            dy2 = velocidade;
             sobe_desce = 0x02;
         }
-        if (keycode == 17 && player == 1)
-        { // W
+
+        // W
+        if (keycode == 17 && jogador == 1)
+        {
             play_sound(sound_p1);
-            dy1 = -velocity;
+            dy1 = -velocidade;
         }
-        if (keycode == 72 && player == 2)
-        { // Seta para cima
+
+        // Seta cima
+        if (keycode == 72 && jogador == 2)
+        {
             play_sound(sound_p2);
-            dy2 = -velocity;
+            dy2 = -velocidade;
             sobe_desce = 0x01;
         }
 
-        if (keycode == 57 && player == 0)
-        { // Space
+        // Espaço
+        if (keycode == 57 && jogador == 0)
+        {
             iniciar = 1;
-            player = 1;
+            jogador = 1;
             write_serial(0x05);
         }
     }
@@ -309,104 +323,106 @@ void isr3(void)
 {
     unsigned char dados = inb(COM2);
 
-    if (status_1 == 0)
+    if (status == 0)
     {
         if (dados == 0xFF)
         {
-            status_1 = 1;
+            status = 1;
         }
         else if (dados == 0x05)
         {
             iniciar = 1;
-            player = 2;
-            status_1 = 0;
+            jogador = 2;
+            status = 0;
         }
     }
-    else if (status_1 == 1)
+    else if (status == 1)
     {
-        if (player == 1)
+        if (jogador == 1)
         {
             if (dados == 0x01)
             {
-                dy2 = -velocity;
+                dy2 = -velocidade;
                 // draw_square(tamanho_tabuleiro_x - 80, y2, largura_barra, altura_barra, 0xFF0000);
-                status_1 = 0;
+                status = 0;
             }
             else if (dados == 0x02)
             {
-                dy2 = velocity;
+                dy2 = velocidade;
                 // draw_square(tamanho_tabuleiro_x - 80, y2, largura_barra, altura_barra, 0xFF0000);
-                status_1 = 0;
+                status = 0;
             }
             else if (dados == 0x00)
             {
                 dy2 = 0;
             }
         }
-        else if (player == 2)
+        else if (jogador == 2)
         {
             tmp_y1 = dados << 8;
-            status_1 = 2;
+            status = 2;
         }
     }
-    else if (status_1 == 2)
+    else if (status == 2)
     {
         tmp_y1 |= dados;
-        status_1 = 3;
+        status = 3;
     }
-    else if (status_1 == 3)
+    else if (status == 3)
     {
         tmp_score_p1 = dados;
-        status_1 = 4;
+        status = 4;
     }
-    else if (status_1 == 4)
+    else if (status == 4)
     {
         tmp_y2 = dados << 8;
-        status_1 = 5;
+        status = 5;
     }
-    else if (status_1 == 5)
+    else if (status == 5)
     {
         tmp_y2 |= dados;
-        status_1 = 6;
+        status = 6;
     }
-    else if (status_1 == 6)
+    else if (status == 6)
     {
         tmp_score_p2 = dados;
-        status_1 = 7;
+        status = 7;
     }
-    else if (status_1 == 7)
+    else if (status == 7)
     {
         tmp_x_bola = dados << 8;
-        status_1 = 8;
+        status = 8;
     }
-    else if (status_1 == 8)
+    else if (status == 8)
     {
         tmp_x_bola |= dados;
-        status_1 = 9;
+        status = 9;
     }
-    else if (status_1 == 9)
+    else if (status == 9)
     {
         tmp_y_bola = dados << 8;
-        status_1 = 10;
+        status = 10;
     }
-    else if (status_1 == 10)
+    else if (status == 10)
     {
         tmp_y_bola |= dados;
         setDados();
-        status_1 = 0;
+        status = 0;
     }
 }
 
 void setDados()
 {
-    draw_square(60, y1, largura_barra, altura_barra, 0xFF0000);
-    draw_square(x_bola, y_bola, largura_bola, altura_bola, 0XFF0000);
-    draw_square(tamanho_tabuleiro_x - 80, y2, largura_barra, altura_barra, 0xFF0000);
+    draw_square(60, y1, largura_barra, altura_barra, 0x000000);
+    draw_square(x_bola, y_bola, largura_bola, altura_bola, 0x000000);
+    draw_square(tamanho_tabuleiro_x - 80, y2, largura_barra, altura_barra, 0x000000);
 
     y1 = tmp_y1;
-    score_p1 = tmp_score_p1 + 472;
     y2 = tmp_y2;
+
+    score_p1 = tmp_score_p1 + 472;
     score_p2 = tmp_score_p2 + 530;
+
     x_bola = tmp_x_bola;
     y_bola = tmp_y_bola;
 
@@ -415,24 +431,26 @@ void setDados()
     draw_square(tamanho_tabuleiro_x - 80, y2, largura_barra, altura_barra, 0x000000);
 }
 
-void senddadosP2()
+void envia_dados_P2()
 {
+    score_p1 = score_p1 - 472;
+    score_p2 = score_p2 - 530;
+
+    write_serial(score_p1); //score_p1
+    write_serial(score_p2); //score_p2
+
     write_serial(0xFF);
     write_serial(y1 >> 8);
     write_serial(y1);
-    score_p1 = score_p1 - 472;
-    write_serial(score_p1); //score_p1
     write_serial(y2 >> 8);
     write_serial(y2);
-    score_p2 = score_p2 - 530;
-    write_serial(score_p2); //score_p2
     write_serial(x_bola >> 8);
     write_serial(x_bola);
     write_serial(y_bola >> 8);
     write_serial(y_bola);
 }
 
-void senddadosP1()
+void envia_dados_P1()
 {
     write_serial(0xFF);
     write_serial(sobe_desce);
@@ -479,7 +497,7 @@ void write_serial(char dados)
 
 int main(void)
 {
-    draw_square(0, 0, tamanho_tabuleiro_x, tamanho_tabuleiro_y, 0xFF0000);
+    draw_square(0, 0, tamanho_tabuleiro_x, tamanho_tabuleiro_y, 0x000000);
     usart_init(COM1);
     usart_init(COM2);
     while (1)
