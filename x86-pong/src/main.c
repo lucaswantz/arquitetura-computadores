@@ -37,10 +37,10 @@ volatile static int sobe_desce = 0x00;
 Emite som quando pressionado
 */
 
-volatile static int sound_p1 = 400;
-volatile static int sound_p2 = 600;
+volatile static int som_p1 = 500;
+volatile static int som_p2 = 700;
 
-void play_sound(long int frequencia)
+void tocar_musica(long int frequencia)
 {
     long int div;
     unsigned char tmp;
@@ -57,7 +57,7 @@ void play_sound(long int frequencia)
     }
 }
 
-void stop_sund(void)
+void parar_musica(void)
 {
     unsigned char tmp;
     tmp = inb(0x61);
@@ -250,14 +250,14 @@ void isr1(void)
         // W
         if (keycode == 17 && jogador == 1)
         {
-            stop_sund();
+            parar_musica();
             dy1 = 0;
         }
 
         // Seta cima
         if (keycode == 72 && jogador == 2)
         {
-            stop_sund();
+            parar_musica();
             dy2 = 0;
             sobe_desce = 0x00;
         }
@@ -265,14 +265,14 @@ void isr1(void)
         // S
         if (keycode == 31 && jogador == 1)
         {
-            stop_sund();
+            parar_musica();
             dy1 = 0;
         }
 
         // Seta baixo
         if (keycode == 80 && jogador == 2)
         {
-            stop_sund();
+            parar_musica();
             dy2 = 0;
             sobe_desce = 0x00;
         }
@@ -282,14 +282,14 @@ void isr1(void)
         // S
         if (keycode == 31 && jogador == 1)
         {
-            play_sound(sound_p1);
+            tocar_musica(som_p1);
             dy1 = velocidade;
         }
 
         // Seta baixo
         if (keycode == 80 && jogador == 2)
         {
-            play_sound(sound_p2);
+            tocar_musica(som_p2);
             dy2 = velocidade;
             sobe_desce = 0x02;
         }
@@ -297,14 +297,14 @@ void isr1(void)
         // W
         if (keycode == 17 && jogador == 1)
         {
-            play_sound(sound_p1);
+            tocar_musica(som_p1);
             dy1 = -velocidade;
         }
 
         // Seta cima
         if (keycode == 72 && jogador == 2)
         {
-            play_sound(sound_p2);
+            tocar_musica(som_p2);
             dy2 = -velocidade;
             sobe_desce = 0x01;
         }
